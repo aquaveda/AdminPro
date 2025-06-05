@@ -1,14 +1,37 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Plus, MoreHorizontal, User, Calendar, MessageSquare, Paperclip } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Plus, MoreHorizontal, User, Calendar, MessageSquare, Paperclip, Edit, Trash2 } from 'lucide-react';
+import { toast } from '@/components/ui/use-toast';
+
+interface Task {
+  id: number;
+  title: string;
+  description: string;
+  column: string;
+  priority: 'low' | 'medium' | 'high';
+  assignee: string;
+  dueDate: string;
+  comments: number;
+  attachments: number;
+  tags: string[];
+}
 
 const KanbanPage = () => {
   const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskDescription, setNewTaskDescription] = useState('');
+  const [newTaskPriority, setNewTaskPriority] = useState<'low' | 'medium' | 'high'>('medium');
+  const [newTaskAssignee, setNewTaskAssignee] = useState('');
+  const [newTaskDueDate, setNewTaskDueDate] = useState('');
   const [showNewTaskForm, setShowNewTaskForm] = useState<string | null>(null);
+  const [showFullTaskDialog, setShowFullTaskDialog] = useState(false);
+  const [draggedTask, setDraggedTask] = useState<Task | null>(null);
 
   const columns = [
     { id: 'todo', title: 'To Do', color: 'bg-gray-100 dark:bg-gray-800' },
@@ -17,7 +40,7 @@ const KanbanPage = () => {
     { id: 'done', title: 'Done', color: 'bg-green-100 dark:bg-green-900' }
   ];
 
-  const tasks = [
+  const [tasks, setTasks] = useState<Task[]>([
     {
       id: 1,
       title: 'Design new dashboard layout',
@@ -90,7 +113,7 @@ const KanbanPage = () => {
       attachments: 5,
       tags: ['Testing', 'UX']
     }
-  ];
+  ]);
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -122,10 +145,100 @@ const KanbanPage = () => {
 
   const handleAddTask = (columnId: string) => {
     if (newTaskTitle.trim()) {
-      // In a real app, this would add the task to state/database
-      console.log(`Adding task "${newTaskTitle}" to column ${columnId}`);
+      const newTask: Task = {
+        id: Date.now(),
+        title: newTaskTitle,
+        description: newTaskDescription || 'No description provided',
+        column: columnId,
+        priority: newTaskPriority,
+        assignee: newTaskAssignee || 'Unassigned',
+        dueDate: newTaskDueDate || new Date().toISOString().split('T')[0],
+        comments: 0,
+        attachments: 0,
+        tags: []
+      };
+      
+      setTasks([...tasks, newTask]);
       setNewTaskTitle('');
+      setNewTaskDescription('');
+      setNewTaskPriority('medium');
+      setNewTaskAssignee('');
+      setNewTaskDueDate('');
       setShowNewTaskForm(null);
+      
+      toast({
+        title: "Task Added",
+        description: `"${newTask.title}" has been added to ${columns.find(col => col.id === columnId)?.title}`,
+      });
+    }
+  };
+
+  const handleDeleteTask = (taskId: number) => {
+    setTasks(tasks.filter(task => task.id !== taskId));
+    toast({
+      title: "Task Deleted",
+      description: "Task has been successfully deleted",
+    });
+  };
+
+  const handleDragStart = (e: React.DragEvent, task: Task) => {
+    setDraggedTask(task);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, columnId: string) => {
+    e.preventDefault();
+    if (draggedTask && draggedTask.column !== columnId) {
+      setTasks(tasks.map(task => 
+        task.id === draggedTask.id 
+          ? { ...task, column: columnId }
+          : task
+      ));
+      
+      toast({
+        title: "Task Moved",
+        description: `"${draggedTask.title}" moved to ${columns.find(col => col.id === columnId)?.title}`,
+      });
+    }
+    setDraggedTask(null);
+  };
+
+  const handleCreateTaskFromHeader = () => {
+    setShowFullTaskDialog(true);
+  };
+
+  const handleCreateFullTask = () => {
+    if (newTaskTitle.trim()) {
+      const newTask: Task = {
+        id: Date.now(),
+        title: newTaskTitle,
+        description: newTaskDescription || 'No description provided',
+        column: 'todo',
+        priority: newTaskPriority,
+        assignee: newTaskAssignee || 'Unassigned',
+        dueDate: newTaskDueDate || new Date().toISOString().split('T')[0],
+        comments: 0,
+        attachments: 0,
+        tags: []
+      };
+      
+      setTasks([...tasks, newTask]);
+      setNewTaskTitle('');
+      setNewTaskDescription('');
+      setNewTaskPriority('medium');
+      setNewTaskAssignee('');
+      setNewTaskDueDate('');
+      setShowFullTaskDialog(false);
+      
+      toast({
+        title: "Task Created",
+        description: `"${newTask.title}" has been added to To Do`,
+      });
     }
   };
 
@@ -137,10 +250,81 @@ const KanbanPage = () => {
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Kanban Board</h1>
           <p className="text-gray-600 dark:text-gray-300 mt-2">Organize and track your project tasks visually.</p>
         </div>
-        <Button className="bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700">
-          <Plus className="w-4 h-4 mr-2" />
-          Add Task
-        </Button>
+        <Dialog open={showFullTaskDialog} onOpenChange={setShowFullTaskDialog}>
+          <DialogTrigger asChild>
+            <Button 
+              className="bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700"
+              onClick={handleCreateTaskFromHeader}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Task
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create New Task</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="task-title">Title</Label>
+                <Input
+                  id="task-title"
+                  placeholder="Enter task title..."
+                  value={newTaskTitle}
+                  onChange={(e) => setNewTaskTitle(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="task-description">Description</Label>
+                <Textarea
+                  id="task-description"
+                  placeholder="Enter task description..."
+                  value={newTaskDescription}
+                  onChange={(e) => setNewTaskDescription(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="task-priority">Priority</Label>
+                <Select value={newTaskPriority} onValueChange={(value: 'low' | 'medium' | 'high') => setNewTaskPriority(value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="task-assignee">Assignee</Label>
+                <Input
+                  id="task-assignee"
+                  placeholder="Enter assignee name..."
+                  value={newTaskAssignee}
+                  onChange={(e) => setNewTaskAssignee(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="task-due-date">Due Date</Label>
+                <Input
+                  id="task-due-date"
+                  type="date"
+                  value={newTaskDueDate}
+                  onChange={(e) => setNewTaskDueDate(e.target.value)}
+                />
+              </div>
+              <div className="flex space-x-2">
+                <Button onClick={handleCreateFullTask} className="flex-1">
+                  Create Task
+                </Button>
+                <Button variant="outline" onClick={() => setShowFullTaskDialog(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Kanban Board */}
@@ -149,7 +333,12 @@ const KanbanPage = () => {
           const columnTasks = getTasksForColumn(column.id);
           
           return (
-            <div key={column.id} className="space-y-4">
+            <div 
+              key={column.id} 
+              className="space-y-4"
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, column.id)}
+            >
               {/* Column Header */}
               <Card className={`${column.color} border-gray-200 dark:border-gray-700`}>
                 <CardHeader className="pb-3">
@@ -167,7 +356,12 @@ const KanbanPage = () => {
               {/* Tasks */}
               <div className="space-y-3">
                 {columnTasks.map(task => (
-                  <Card key={task.id} className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow duration-200 cursor-pointer">
+                  <Card 
+                    key={task.id} 
+                    className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow duration-200 cursor-move"
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, task)}
+                  >
                     <CardContent className="p-4">
                       {/* Task Header */}
                       <div className="flex items-start justify-between mb-3">
@@ -179,9 +373,19 @@ const KanbanPage = () => {
                             {task.description}
                           </p>
                         </div>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 ml-2">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </Button>
+                        <div className="flex space-x-1">
+                          <Button variant="ghost" size="icon" className="h-6 w-6">
+                            <Edit className="w-3 h-3" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-6 w-6 text-red-500 hover:text-red-700"
+                            onClick={() => handleDeleteTask(task.id)}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
                       </div>
 
                       {/* Tags */}
