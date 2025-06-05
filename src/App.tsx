@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,6 +9,9 @@ import Tables from "./pages/Tables";
 import Charts from "./pages/Charts";
 import CalendarPage from "./pages/CalendarPage";
 import KanbanPage from "./pages/KanbanPage";
+import Profile from "./pages/Profile";
+import Notifications from "./pages/Notifications";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,7 +31,9 @@ const App = () => (
             <Route path="kanban" element={<KanbanPage />} />
             <Route path="users" element={<Tables />} />
             <Route path="reports" element={<Charts />} />
-            <Route path="settings" element={<Dashboard />} />
+            <Route path="profile" element={<Profile />} />
+            <Route path="notifications" element={<Notifications />} />
+            <Route path="settings" element={<Settings />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

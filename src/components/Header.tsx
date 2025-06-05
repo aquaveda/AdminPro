@@ -8,7 +8,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import { Link } from 'react-router-dom';
 
 interface HeaderProps {
   isDarkMode: boolean;
@@ -43,10 +45,12 @@ const Header = ({ isDarkMode, onThemeToggle }: HeaderProps) => {
           </Button>
 
           {/* Notifications */}
-          <Button variant="ghost" size="icon" className="text-gray-600 dark:text-gray-300 relative">
-            <Bell className="w-5 h-5" />
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full text-xs"></span>
-          </Button>
+          <Link to="/notifications">
+            <Button variant="ghost" size="icon" className="text-gray-600 dark:text-gray-300 relative">
+              <Bell className="w-5 h-5" />
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full text-xs"></span>
+            </Button>
+          </Link>
 
           {/* User Menu */}
           <DropdownMenu>
@@ -56,8 +60,17 @@ const Header = ({ isDarkMode, onThemeToggle }: HeaderProps) => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem>Profile</DropdownMenuItem>
-              <DropdownMenuItem>Settings</DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/profile" className="cursor-pointer">Profile</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/notifications" className="cursor-pointer">Notifications</Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link to="/settings" className="cursor-pointer">Settings</Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem>Logout</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
